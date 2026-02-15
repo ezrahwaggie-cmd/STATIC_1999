@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>STATIC_1999</title>
+<style>
+body { margin:0; overflow:hidden; background:black; }
+canvas { display:block; }
+#joystick {
+  position:absolute;
+  bottom:40px;
+  left:40px;
+  width:100px;
+  height:100px;
+  background:rgba(255,255,255,0.1);
+  border-radius:50%;
+}
+#stick {
+  width:40px;
+  height:40px;
+  background:rgba(255,255,255,0.4);
+  border-radius:50%;
+  position:absolute;
+  top:30px;
+  left:30px;
+}
+</style>
+</head>
+<body>
+
+<div id="joystick"><div id="stick"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+<script>
+let scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x000000, 5, 20);
+
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+let renderer = new THREE.WebGLRenderer({antialias:false});
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+renderer.setPixelRatio(0.5); // PSX pixelated look
+
+// Floor
+let floorGeo = new THREE.PlaneGeometry(100,100);
+let floorMat = new THREE.MeshBasicMaterial({color:0x222222});
+let floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI/2;
+scene.add(floor);
+
+// Walls
+let wallGeo = new THREE.BoxGeometry(1,5,50);
+let wallMat = new THREE.MeshBasicMaterial({color:0x111111});
+let wall1 = new THREE.Mesh(wallGeo, wallMat);
+wall1.position.set(-10,2.5,0);
+scene.add(wall1);
+
+let wall2 = wall1.clone();
+wall2.position.set(10,2.5,0);
+scene.add(wall2);
+
+// Monster
+let monsterGeo = new THREE.BoxGeometry(1,2,1);
+let monsterMat = new THREE.MeshBasicMaterial({color:0xff0000});
+let monster = new THREE.Mesh(monsterGeo, monsterMat);
+monster.position.set(0,1,-15);
+scene.add(monster);
+
+camera.position.y = 1.6;
+
+let moveForward = 0;
+let moveSide = 0;
+
+// Joystick
+let stick = document.getElementById("stick");
+let joystick = document.getElementById("joystick");
+
+joystick.addEventListener("touchmove", function(e){
+  let touch = e.touches[0];
+  let rect = joystick.getBoundingClientRect();
+  let x = touch.clientX - rect.left - 50;
+  let y = touch.clientY - rect.top - 50;
+
+  x = Math.max(-30, Math.min(30, x));
+  y = Math.max(-30, Math.min(30, y));
+
+  stick.style.left = (30 + x) + "px";
+  stick.style.top = (30 + y) + "px";
+
+  moveSide = x/30;
+  moveForward = -y/30;
+});
+
+joystick.addEventListener("touchend", function(){
+  stick.style.left = "30px";
+  stick.style.top = "30px";
+  moveForward = 0;
+  moveSide = 0;
+});
+
+// Look around
+document.addEventListener("touchmove", function(e){
+  if(e.target.id !== "stick"){
+    camera.rotation.y -= e.touches[0].movementX * 0.002 || 0;
+  }
+});
+
+// Monster AI
+function updateMonster(){
+  let dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+
+  let toMonster = monster.position.clone().sub(camera.position).normalize();
+  let dot = dir.dot(toMonster);
+
+  if(dot < 0.5){
+    monster.position.z += 0.05;
+  }
+
+  if(camera.position.distanceTo(monster.position) < 1.5){
+    alert("YOU WERE CAUGHT");
+    location.reload();
+  }
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+
+  camera.position.x
